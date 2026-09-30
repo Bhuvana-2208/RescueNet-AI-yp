@@ -151,6 +151,13 @@ export default function Page() {
         <div className="mission-id"><span>MISSION ID</span><strong>RN-2048-<b>FLOOD</b></strong></div>
       </section>
 
+      <section className="telemetry-grid" aria-label="Real-time swarm telemetry">
+        <div className="telemetry-card"><span>DECISION LATENCY</span><strong>12 <small>ms / tick</small></strong><em className="safe">● WITHIN BUDGET</em></div>
+        <div className="telemetry-card"><span>COLLISION-FREE MARGIN</span><strong>99.8<small>%</small></strong><em className="safe">● SAFE</em></div>
+        <div className="telemetry-card"><span>TRAJECTORY RECALIBRATION</span><strong>0.3<small>s</small></strong><em className="active">● ACTIVE</em></div>
+        <div className="telemetry-card"><span>NETWORK DROP RESILIENCE</span><strong>100<small>%</small></strong><em className="stable">● STABLE</em></div>
+      </section>
+
       <section className="control-grid">
         <section className="panel input-panel">
           <div className="panel-heading"><div><span className="panel-kicker">01 / INPUT &amp; TRIGGER</span><h2>Incoming Incident</h2></div><div className="panel-symbol"><Zap size={15} /></div></div>
