@@ -106,6 +106,7 @@ export default function Page() {
   const [message, setMessage] = useState('Severe flooding on 5th Avenue, 3 people stuck on roof')
   const [priority, setPriority] = useState('Critical')
   const [swarmStep, setSwarmStep] = useState(0)
+  const [hazardShifted, setHazardShifted] = useState(false)
   const isRunning = swarmStep > 0 && swarmStep < 4
 
   useEffect(() => {
@@ -178,6 +179,22 @@ export default function Page() {
 
         <section className="panel output-panel">
           <div className="panel-heading"><div><span className="panel-kicker">03 / DISPATCH SUMMARY</span><h2>Mission Output</h2></div><div className="panel-symbol ready"><Check size={15} /></div></div>
+          <div className="trajectory-card">
+            <div className="trajectory-heading"><div><span className="panel-kicker">LIVE SWARM TRAJECTORY</span><h3>Obstacle Avoidance Map</h3></div><span className="latency-badge">Latency: 12ms / tick</span></div>
+            <div className={`trajectory-map ${hazardShifted ? 'perturbed' : ''}`}>
+              <div className="map-grid-lines" aria-hidden="true" />
+              <div className="map-label north">N</div><div className="map-label avenue">5TH AVE // FLOOD ZONE</div>
+              <svg className="trajectory-svg" viewBox="0 0 520 210" role="img" aria-label="Animated collision-free paths around hazard zones">
+                <path className="route route-scout" d={hazardShifted ? 'M34 174 C 112 164, 145 112, 216 128 S 342 176, 468 42' : 'M34 174 C 110 148, 142 64, 218 90 S 342 152, 468 42'} />
+                <path className="route route-allocator" d={hazardShifted ? 'M34 174 C 126 190, 182 178, 254 150 S 356 78, 468 42' : 'M34 174 C 124 192, 175 178, 248 145 S 355 72, 468 42'} />
+                <path className="route route-communicator" d={hazardShifted ? 'M34 174 C 120 130, 170 38, 264 64 S 380 116, 468 42' : 'M34 174 C 122 128, 168 44, 260 62 S 376 118, 468 42'} />
+              </svg>
+              <div className="hazard-zone hazard-one" /><div className="hazard-zone hazard-two" />
+              <div className="agent-node scout-node"><span /> <b>SCOUT</b></div><div className="agent-node allocator-node"><span /> <b>ALLOCATOR</b></div><div className="agent-node communicator-node"><span /> <b>COMMUNICATOR</b></div>
+              <div className="map-legend"><span><i className="legend-dot green" /> AGENT NODE</span><span><i className="legend-dot red" /> HAZARD ZONE</span></div>
+            </div>
+            <button className="perturb-button" onClick={() => setHazardShifted((shifted) => !shifted)} aria-pressed={hazardShifted}><Crosshair size={14} /> {hazardShifted ? 'Reset Hazard Field' : 'Simulate Hazard Perturbation'} <span>↗</span></button>
+          </div>
           <div className="summary-grid">
             <div className="summary-card priority"><span>PRIORITY LEVEL</span><strong><span className="priority-flag">!</span>{priority.toUpperCase()}</strong><small>IMMEDIATE RESPONSE</small></div>
             <div className="summary-card"><span>ASSIGNED RESCUE TEAM</span><strong><Users size={16} /> WATER RESCUE <small>UNIT 07</small></strong><small>4 PERSONNEL · BOAT 02</small></div>
