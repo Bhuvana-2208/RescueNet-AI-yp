@@ -69,6 +69,14 @@ function StatusDot({ tone = 'cyan' }: { tone?: string }) {
   return <span className={`status-dot ${tone}`} aria-hidden="true" />
 }
 
+function extractIncident(message: string) {
+  const normalized = message.trim()
+  const locationMatch = normalized.match(/(?:on|at|near)\s+([^,.;]+(?:avenue|ave|street|st|road|rd|boulevard|blvd|drive|dr|lane|ln|way))/i)
+  const location = locationMatch?.[1]?.trim() || '5th Avenue'
+  const details = normalized || 'Severe flooding reported with civilians requiring water rescue.'
+  return { location, details }
+}
+
 function AgentCard({ agent }: { agent: (typeof agents)[number] }) {
   const Icon = agent.icon
   const statusClass = agent.status === 'Complete' ? 'complete' : agent.status === 'In Progress' ? 'working' : 'queued'
@@ -107,6 +115,7 @@ export default function Page() {
   const [priority, setPriority] = useState('Critical')
   const [swarmStep, setSwarmStep] = useState(0)
   const [hazardShifted, setHazardShifted] = useState(false)
+  const [missionIncident, setMissionIncident] = useState(() => extractIncident(message))
   const isRunning = swarmStep > 0 && swarmStep < 4
 
   useEffect(() => {
@@ -126,13 +135,15 @@ export default function Page() {
   }), [swarmStep])
 
   const alertText = useMemo(() => {
-    if (priority === 'Critical') return 'CRITICAL FLOOD RESPONSE — 5TH AVENUE'
-    if (priority === 'High') return 'HIGH PRIORITY RESPONSE — 5TH AVENUE'
-    return 'EMERGENCY RESPONSE — 5TH AVENUE'
-  }, [priority])
+    const location = missionIncident.location.toUpperCase()
+    if (priority === 'Critical') return `CRITICAL FLOOD RESPONSE — ${location}`
+    if (priority === 'High') return `HIGH PRIORITY RESPONSE — ${location}`
+    return `EMERGENCY RESPONSE — ${location}`
+  }, [missionIncident.location, priority])
 
   function triggerSwarm() {
     if (isRunning) return
+    setMissionIncident(extractIncident(message))
     setSwarmStep(1)
   }
 
@@ -183,7 +194,7 @@ export default function Page() {
             <div className="trajectory-heading"><div><span className="panel-kicker">LIVE SWARM TRAJECTORY</span><h3>Obstacle Avoidance Map</h3></div><span className="latency-badge">Latency: 12ms / tick</span></div>
             <div className={`trajectory-map ${hazardShifted ? 'perturbed' : ''}`}>
               <div className="map-grid-lines" aria-hidden="true" />
-              <div className="map-label north">N</div><div className="map-label avenue">5TH AVE // FLOOD ZONE</div>
+              <div className="map-label north">N</div><div className="map-label avenue">{missionIncident.location.toUpperCase()} // FLOOD ZONE</div>
               <svg className="trajectory-svg" viewBox="0 0 520 210" role="img" aria-label="Animated collision-free paths around hazard zones">
                 <path className="route route-scout" d={hazardShifted ? 'M34 174 C 112 164, 145 112, 216 128 S 342 176, 468 42' : 'M34 174 C 110 148, 142 64, 218 90 S 342 152, 468 42'} />
                 <path className="route route-allocator" d={hazardShifted ? 'M34 174 C 126 190, 182 178, 254 150 S 356 78, 468 42' : 'M34 174 C 124 192, 175 178, 248 145 S 355 72, 468 42'} />
@@ -199,9 +210,9 @@ export default function Page() {
             <div className="summary-card priority"><span>PRIORITY LEVEL</span><strong><span className="priority-flag">!</span>{priority.toUpperCase()}</strong><small>IMMEDIATE RESPONSE</small></div>
             <div className="summary-card"><span>ASSIGNED RESCUE TEAM</span><strong><Users size={16} /> WATER RESCUE <small>UNIT 07</small></strong><small>4 PERSONNEL · BOAT 02</small></div>
             <div className="summary-card"><span>ESTIMATED ARRIVAL</span><strong><Clock3 size={16} /> 08:42 <small>MIN</small></strong><small>ETA CONFIDENCE 94%</small></div>
-            <div className="summary-card location"><span>INCIDENT LOCATION</span><strong><MapPin size={16} /> 5TH AVENUE</strong><small><LocateFixed size={11} /> 40.7128° N, 74.0060° W</small></div>
+            <div className="summary-card location"><span>INCIDENT LOCATION</span><strong><MapPin size={16} /> {missionIncident.location.toUpperCase()}</strong><small><LocateFixed size={11} /> EXTRACTED FROM INCOMING MESSAGE</small></div>
           </div>
-          <div className="alert-output"><div className="alert-title"><span>READY-TO-SEND EMERGENCY ALERT</span><span className="draft-badge">DRAFT</span></div><div className="alert-copy"><strong>{swarmStep === 4 ? alertText : 'AWAITING SWARM ANALYSIS'}</strong><p>{swarmStep === 4 ? 'Water rescue team dispatched to 5th Avenue. Three civilians reported stranded on rooftop due to severe flooding. Avoid area and follow emergency personnel instructions.' : 'Trigger the RescueNet AI Swarm to generate a verified dispatch alert.'}</p><div className="alert-tags"><span><Radio size={11} /> CITYWIDE</span><span><Send size={11} /> SMS · RADIO · WEB</span></div></div></div>
+          <div className="alert-output"><div className="alert-title"><span>READY-TO-SEND EMERGENCY ALERT</span><span className="draft-badge">DRAFT</span></div><div className="alert-copy"><strong>{swarmStep === 4 ? alertText : 'AWAITING SWARM ANALYSIS'}</strong><p>{swarmStep === 4 ? `Water rescue team dispatched to ${missionIncident.location}. ${missionIncident.details} Avoid area and follow emergency personnel instructions.` : 'Trigger the RescueNet AI Swarm to generate a verified dispatch alert.'}</p><div className="alert-tags"><span><Radio size={11} /> CITYWIDE</span><span><Send size={11} /> SMS · RADIO · WEB</span></div></div></div>
           <button className="dispatch-button"><Send size={15} /> Review &amp; Dispatch Alert <span>→</span></button>
         </section>
       </section>
