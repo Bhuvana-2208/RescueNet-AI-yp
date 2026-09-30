@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   AlertTriangle,
+  LoaderCircle,
   BellRing,
   Check,
   ChevronDown,
@@ -28,7 +29,7 @@ const agents = [
     role: 'SITUATION AWARENESS',
     icon: Crosshair,
     color: 'cyan',
-    status: 'Complete',
+    status: 'Queued',
     duration: '1.2s',
     steps: [
       ['Message ingestion', 'Complete'],
@@ -41,7 +42,7 @@ const agents = [
     role: 'RESOURCE COORDINATION',
     icon: Route,
     color: 'amber',
-    status: 'Routing',
+    status: 'Queued',
     duration: '2.4s',
     steps: [
       ['Resource pathfinding', 'Complete'],
@@ -70,6 +71,7 @@ function StatusDot({ tone = 'cyan' }: { tone?: string }) {
 
 function AgentCard({ agent }: { agent: (typeof agents)[number] }) {
   const Icon = agent.icon
+  const statusClass = agent.status === 'Complete' ? 'complete' : agent.status === 'In Progress' ? 'working' : 'queued'
   return (
     <article className={`agent-card ${agent.color}`}>
       <div className="agent-head">
@@ -80,7 +82,7 @@ function AgentCard({ agent }: { agent: (typeof agents)[number] }) {
             <p>{agent.role}</p>
           </div>
         </div>
-        <div className={`agent-status ${agent.status === 'Complete' ? 'complete' : agent.status === 'Routing' ? 'working' : 'queued'}`}>
+        <div className={`agent-status ${statusClass}`}>
           <StatusDot tone={agent.color} /> {agent.status}
         </div>
       </div>
@@ -103,7 +105,24 @@ function AgentCard({ agent }: { agent: (typeof agents)[number] }) {
 export default function Page() {
   const [message, setMessage] = useState('Severe flooding on 5th Avenue, 3 people stuck on roof')
   const [priority, setPriority] = useState('Critical')
-  const [triggered, setTriggered] = useState(false)
+  const [swarmStep, setSwarmStep] = useState(0)
+  const isRunning = swarmStep > 0 && swarmStep < 4
+
+  useEffect(() => {
+    if (!isRunning) return
+    const timer = window.setTimeout(() => setSwarmStep((step) => Math.min(step + 1, 4)), 500)
+    return () => window.clearTimeout(timer)
+  }, [isRunning, swarmStep])
+
+  const liveAgents = useMemo(() => agents.map((agent, index) => {
+    const agentStep = swarmStep - index
+    const status = agentStep >= 2 ? 'Complete' : agentStep === 1 ? 'In Progress' : 'Queued'
+    const steps = agent.steps.map(([label], stepIndex) => [
+      label,
+      agentStep >= 2 ? 'Complete' : agentStep === 1 && stepIndex === 0 ? 'In progress' : 'Queued',
+    ] as [string, string])
+    return { ...agent, status, duration: status === 'Queued' ? '—' : status === 'Complete' ? '0.6s' : 'LIVE', steps }
+  }), [swarmStep])
 
   const alertText = useMemo(() => {
     if (priority === 'Critical') return 'CRITICAL FLOOD RESPONSE — 5TH AVENUE'
@@ -112,8 +131,8 @@ export default function Page() {
   }, [priority])
 
   function triggerSwarm() {
-    setTriggered(true)
-    window.setTimeout(() => setTriggered(false), 3500)
+    if (isRunning) return
+    setSwarmStep(1)
   }
 
   return (
@@ -139,14 +158,14 @@ export default function Page() {
           <textarea value={message} onChange={(event) => setMessage(event.target.value)} aria-label="Emergency message" />
           <div className="field-label priority-label"><span>PRIORITY LEVEL</span><span className="required">REQUIRED</span></div>
           <div className="select-wrap"><select value={priority} onChange={(event) => setPriority(event.target.value)} aria-label="Priority level"><option>Critical</option><option>High</option><option>Moderate</option></select><ChevronDown size={15} /></div>
-          <button className={`trigger-button ${triggered ? 'triggered' : ''}`} onClick={triggerSwarm}><Sparkles size={18} />{triggered ? 'Swarm Activated' : 'Trigger RescueNet AI Swarm'}<span className="button-arrow">→</span></button>
+          <button className={`trigger-button ${isRunning ? 'triggered' : ''}`} onClick={triggerSwarm} disabled={isRunning} aria-live="polite">{isRunning ? <LoaderCircle className="spin" size={18} /> : <Sparkles size={18} />}{isRunning ? 'Swarm Processing' : swarmStep === 4 ? 'Swarm Complete — Run Again' : 'Trigger RescueNet AI Swarm'}<span className="button-arrow">→</span></button>
           <div className="secure-note"><Shield size={13} /> SECURE CHANNEL <span /> <span>ENCRYPTED / AES-256</span></div>
         </section>
 
         <section className="panel stream-panel">
           <div className="panel-heading"><div><span className="panel-kicker">02 / LIVE MULTI-AGENT STREAM</span><h2>Swarm Activity</h2></div><div className="live-label"><StatusDot /> LIVE</div></div>
           <div className="stream-summary"><div><span>ACTIVE AGENTS</span><strong>03</strong></div><div><span>EVENTS PROCESSED</span><strong>12</strong></div><div><span>SWARM LATENCY</span><strong>84<small>ms</small></strong></div></div>
-          <div className="agent-list">{agents.map((agent) => <AgentCard key={agent.name} agent={agent} />)}</div>
+          <div className="agent-list">{liveAgents.map((agent) => <AgentCard key={agent.name} agent={agent} />)}</div>
           <div className="stream-footer"><Activity size={13} /> STREAMING TELEMETRY <span>•••</span></div>
         </section>
 
@@ -158,7 +177,7 @@ export default function Page() {
             <div className="summary-card"><span>ESTIMATED ARRIVAL</span><strong><Clock3 size={16} /> 08:42 <small>MIN</small></strong><small>ETA CONFIDENCE 94%</small></div>
             <div className="summary-card location"><span>INCIDENT LOCATION</span><strong><MapPin size={16} /> 5TH AVENUE</strong><small><LocateFixed size={11} /> 40.7128° N, 74.0060° W</small></div>
           </div>
-          <div className="alert-output"><div className="alert-title"><span>READY-TO-SEND EMERGENCY ALERT</span><span className="draft-badge">DRAFT</span></div><div className="alert-copy"><strong>{alertText}</strong><p>Water rescue team dispatched to <b>5th Avenue</b>. Three civilians reported stranded on rooftop due to severe flooding. Avoid area and follow emergency personnel instructions.</p><div className="alert-tags"><span><Radio size={11} /> CITYWIDE</span><span><Send size={11} /> SMS · RADIO · WEB</span></div></div></div>
+          <div className="alert-output"><div className="alert-title"><span>READY-TO-SEND EMERGENCY ALERT</span><span className="draft-badge">DRAFT</span></div><div className="alert-copy"><strong>{swarmStep === 4 ? alertText : 'AWAITING SWARM ANALYSIS'}</strong><p>{swarmStep === 4 ? 'Water rescue team dispatched to 5th Avenue. Three civilians reported stranded on rooftop due to severe flooding. Avoid area and follow emergency personnel instructions.' : 'Trigger the RescueNet AI Swarm to generate a verified dispatch alert.'}</p><div className="alert-tags"><span><Radio size={11} /> CITYWIDE</span><span><Send size={11} /> SMS · RADIO · WEB</span></div></div></div>
           <button className="dispatch-button"><Send size={15} /> Review &amp; Dispatch Alert <span>→</span></button>
         </section>
       </section>
